@@ -1,6 +1,7 @@
 /* eslint-disable max-len */
 import * as React from 'react';
 import { useEffect, useState, useRef } from 'react';
+import cn from 'classnames'; // Імпортуємо утиліту для класів
 import { UserWarning } from './UserWarning';
 import { Todo } from './types/Todo';
 import {
@@ -11,16 +12,22 @@ import {
   USER_ID,
 } from './api/todos';
 
+// Оголошуємо Enum для фільтрів
+enum FilterType {
+  All = 'all',
+  Active = 'active',
+  Completed = 'completed',
+}
+
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState<FilterType>(FilterType.All);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [loadingTodoIds, setLoadingTodoIds] = useState<number[]>([]);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
 
-  // Стейти для редагування
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [editTitle, setEditTitle] = useState('');
 
@@ -95,8 +102,10 @@ export const App: React.FC = () => {
   };
 
   const handleUpdate = (todo: Todo, fields: Partial<Todo>) => {
-    if (fields.title !== undefined) {
-      const trimmedTitle = fields.title.trim();
+    const updatedFields = { ...fields };
+
+    if (updatedFields.title !== undefined) {
+      const trimmedTitle = updatedFields.title.trim();
 
       if (trimmedTitle === todo.title) {
         setEditingTodo(null);
@@ -111,10 +120,12 @@ export const App: React.FC = () => {
 
         return;
       }
+
+      updatedFields.title = trimmedTitle;
     }
 
     setLoadingTodoIds(prev => [...prev, todo.id]);
-    updateTodo(todo.id, fields)
+    updateTodo(todo.id, updatedFields)
       .then(updatedTodo => {
         setTodos(prev => prev.map(t => (t.id === todo.id ? updatedTodo : t)));
         setEditingTodo(null);
@@ -130,11 +141,11 @@ export const App: React.FC = () => {
   }
 
   const visibleTodos = todos.filter(todo => {
-    if (filter === 'active') {
+    if (filter === FilterType.Active) {
       return !todo.completed;
     }
 
-    if (filter === 'completed') {
+    if (filter === FilterType.Completed) {
       return todo.completed;
     }
 
@@ -152,7 +163,7 @@ export const App: React.FC = () => {
           {todos.length > 0 && (
             <button
               type="button"
-              className={`todoapp__toggle-all ${isAllCompleted ? 'active' : ''}`}
+              className={cn('todoapp__toggle-all', { active: isAllCompleted })}
               data-cy="ToggleAllButton"
               onClick={() => {
                 const target = !isAllCompleted;
@@ -183,7 +194,7 @@ export const App: React.FC = () => {
             {visibleTodos.map(todo => (
               <div
                 data-cy="Todo"
-                className={`todo ${todo.completed ? 'completed' : ''}`}
+                className={cn('todo', { completed: todo.completed })}
                 key={todo.id}
               >
                 <label className="todo__status-label">
@@ -242,7 +253,9 @@ export const App: React.FC = () => {
 
                 <div
                   data-cy="TodoLoader"
-                  className={`modal overlay ${loadingTodoIds.includes(todo.id) ? 'is-active' : ''}`}
+                  className={cn('modal overlay', {
+                    'is-active': loadingTodoIds.includes(todo.id),
+                  })}
                 >
                   <div className="modal-background has-background-white-ter" />
                   <div className="loader" />
@@ -284,24 +297,30 @@ export const App: React.FC = () => {
               <a
                 href="#/"
                 data-cy="FilterLinkAll"
-                className={`filter__link ${filter === 'all' ? 'selected' : ''}`}
-                onClick={() => setFilter('all')}
+                className={cn('filter__link', {
+                  selected: filter === FilterType.All,
+                })}
+                onClick={() => setFilter(FilterType.All)}
               >
                 All
               </a>
               <a
                 href="#/active"
                 data-cy="FilterLinkActive"
-                className={`filter__link ${filter === 'active' ? 'selected' : ''}`}
-                onClick={() => setFilter('active')}
+                className={cn('filter__link', {
+                  selected: filter === FilterType.Active,
+                })}
+                onClick={() => setFilter(FilterType.Active)}
               >
                 Active
               </a>
               <a
                 href="#/completed"
                 data-cy="FilterLinkCompleted"
-                className={`filter__link ${filter === 'completed' ? 'selected' : ''}`}
-                onClick={() => setFilter('completed')}
+                className={cn('filter__link', {
+                  selected: filter === FilterType.Completed,
+                })}
+                onClick={() => setFilter(FilterType.Completed)}
               >
                 Completed
               </a>
@@ -325,7 +344,10 @@ export const App: React.FC = () => {
 
       <div
         data-cy="ErrorNotification"
-        className={`notification is-danger is-light has-text-weight-normal ${!errorMessage ? 'hidden' : ''}`}
+        className={cn(
+          'notification is-danger is-light has-text-weight-normal',
+          { hidden: !errorMessage },
+        )}
       >
         <button
           data-cy="HideErrorButton"
